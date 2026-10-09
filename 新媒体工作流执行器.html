@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>新媒体工作流执行器</title>
+<style>
+  :root{
+    --ink:#1f2937;--muted:#6b7280;--line:#e5e7eb;--bg:#f5f6f8;--card:#fff;
+    --blue:#2563eb;--blue-bg:#eff6ff;--green:#059669;--green-bg:#ecfdf5;
+    --red:#dc2626;--red-bg:#fef2f2;--amber:#b45309;--amber-bg:#fffbeb;--purple:#7c3aed;--purple-bg:#f5f3ff;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+    background:var(--bg);color:var(--ink);line-height:1.85;font-size:16px;padding:0 0 92px}
+  .wrap{max-width:1020px;margin:0 auto;padding:0 20px}
+  header.hero{background:linear-gradient(135deg,#1e3a8a 0%,#2563eb 55%,#7c3aed 100%);color:#fff;
+    border-radius:0 0 18px 18px;padding:24px 32px;margin-bottom:18px}
+  header.hero h1{font-size:22px;font-weight:700;margin-bottom:3px}
+  header.hero .sub{font-size:13.5px;opacity:.9}
+  .status{float:right;font-size:12.5px;background:rgba(255,255,255,.18);border-radius:999px;padding:3px 13px;font-weight:600}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px 22px;margin-bottom:16px}
+  .panel h2{font-size:16px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+  .panel h2 .dot{width:8px;height:8px;border-radius:50%;background:var(--blue);flex:0 0 auto}
+  label.f{display:block;font-size:13.5px;font-weight:700;color:#374151;margin-bottom:6px}
+  label.f .hint{font-weight:400;color:var(--muted);font-size:12.5px}
+  textarea,input[type=text],input[type=password],select{width:100%;border:1px solid var(--line);
+    border-radius:9px;padding:10px 12px;font-size:15px;font-family:inherit;color:var(--ink);background:#fff;outline:none;line-height:1.7}
+  textarea:focus,input:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+  textarea{resize:vertical}
+  .row{display:grid;gap:12px}
+  .row.c3{grid-template-columns:1fr 1fr 1fr}
+  .row.c2{grid-template-columns:1fr 1fr}
+  @media(max-width:760px){.row.c3,.row.c2{grid-template-columns:1fr}}
+  .field{margin-bottom:14px}
+  button{font-family:inherit;font-size:14.5px;font-weight:600;border:none;border-radius:9px;padding:10px 20px;cursor:pointer;transition:opacity .15s}
+  button:hover{opacity:.86}button:disabled{opacity:.45;cursor:not-allowed}
+  .btn-main{background:var(--blue);color:#fff;padding:12px 34px;font-size:16px}
+  .btn-ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
+  .btn-sm{font-size:12.5px;padding:5px 12px;background:#f3f4f6;color:#374151;border:1px solid var(--line);font-weight:600}
+  .btn-ok{background:var(--green);color:#fff}
+  .btn-p{background:var(--purple);color:#fff}
+  .keybar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .keybar input{flex:1;min-width:200px}
+  .keybar select{width:auto;min-width:150px}
+  .task{margin-bottom:30px}
+  .task-head{font-size:17px;font-weight:700;margin:22px 0 12px;padding:10px 16px;background:var(--blue-bg);border-left:4px solid var(--blue);border-radius:8px}
+  .step{background:var(--card);border:1px solid var(--line);border-radius:13px;margin-bottom:12px;overflow:hidden}
+  .step-head{display:flex;align-items:center;gap:10px;padding:12px 18px;background:#fafbfc;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .step-num{width:26px;height:26px;border-radius:50%;background:#94a3b8;color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .step.done .step-num{background:var(--green)}.step.running .step-num{background:var(--blue)}.step.error .step-num{background:var(--red)}
+  .step-head h3{font-size:15.5px;font-weight:700;flex:1}
+  .badge{font-size:12px;font-weight:700;border-radius:999px;padding:2px 11px;background:#f1f5f9;color:var(--muted)}
+  .badge.done{background:var(--green-bg);color:var(--green)}.badge.running{background:var(--blue-bg);color:var(--blue)}
+  .badge.error{background:var(--red-bg);color:var(--red)}
+  .step-body{padding:16px 18px;white-space:pre-wrap;word-break:break-word;font-size:15px;line-height:1.9;font-family:inherit}
+  .step-body.empty{color:#b6bcc6;font-size:14px;padding:14px 18px}
+  .step-body.warn{color:var(--red)}
+  .step-foot{padding:0 18px 14px;display:none;gap:8px;flex-wrap:wrap}
+  .step-foot.show{display:flex}
+  .bar{position:fixed;left:0;right:0;bottom:0;background:rgba(255,255,255,.97);border-top:1px solid var(--line);
+    padding:11px 20px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;backdrop-filter:blur(6px);z-index:50}
+  .toast{position:fixed;top:18px;left:50%;transform:translateX(-50%);background:#1f2937;color:#fff;padding:11px 22px;
+    border-radius:10px;font-size:14.5px;z-index:99;opacity:0;pointer-events:none;transition:opacity .25s;max-width:90vw;text-align:center;line-height:1.6}
+  .toast.show{opacity:1}.toast.bad{background:#b91c1c}.toast.ok{background:#047857}
+  .note{font-size:13px;color:var(--muted);margin-top:8px;line-height:1.7}
+  .divider{height:1px;background:var(--line);margin:16px 0}
+  .progress{font-size:13.5px;color:var(--muted);margin-top:10px}.progress b{color:var(--blue)}
+  .assetbox{max-height:150px;overflow:auto;border:1px solid var(--line);border-radius:9px;padding:8px 12px;font-size:12.5px;line-height:1.7;background:#fafbfc;margin-top:8px}
+  .assetbox .a{display:inline-block;background:#fff;border:1px solid var(--line);border-radius:5px;padding:1px 7px;margin:2px 4px 2px 0;white-space:nowrap}
+  .shotline{font-size:13px;padding:7px 12px;border-bottom:1px dashed var(--line);display:flex;gap:10px;align-items:center}
+  .shotline:last-child{border-bottom:none}
+  .shotline .n{width:20px;color:var(--muted);flex:0 0 auto}
+  .shotline .m{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .shotline .d{color:var(--muted);font-size:12px;flex:0 0 auto}
+  .pill{display:inline-block;font-size:11.5px;font-weight:700;border-radius:5px;padding:1px 8px;margin-left:6px}
+  .pill.no{background:var(--red-bg);color:var(--red)}
+  .pill.ok{background:var(--green-bg);color:var(--green)}
+  pre.mini{background:#0f172a;color:#e2e8f0;border-radius:8px;padding:10px 14px;font-size:12px;overflow:auto;max-height:190px;margin-top:8px;line-height:1.6}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="status" id="status">检测中…</div>
+  <h1>新媒体工作流执行器</h1>
+  <div class="sub">一句想法 → 7 步走完 → 直接出片 / 生成剪映工程</div>
+</header>
+
+<div class="wrap">
+
+  <div class="panel" id="offlineTip" style="display:none;background:var(--amber-bg);border-color:#fcd34d">
+    <b>现在是「纯网页模式」</b>，文案类功能全部可用，但<b>不能自动出片、不能生成剪映草稿</b>——浏览器不允许网页碰你硬盘上的视频文件。<br>
+    想要全自动：关掉这个页面，去桌面双击 <b>「启动工作流.bat」</b>，它会自动把网页带出来。
+  </div>
+
+  <!-- 模型 -->
+  <div class="panel">
+    <h2><span class="dot"></span>第一步：配一次模型（以后不用再配）</h2>
+    <div class="keybar">
+      <select id="provider" style="min-width:170px">
+        <option value="deepseek">DeepSeek（国内直连）</option>
+        <option value="custom">自定义中转（GPT / Claude 等）</option>
+      </select>
+      <input type="password" id="apiKey" placeholder="粘贴 API Key">
+      <button class="btn-ghost" id="saveKey">保存</button>
+      <button class="btn-ghost" id="clearKey">清除</button>
+    </div>
+    <div class="row c2" style="margin-top:12px">
+      <div class="field" id="baseUrlWrap" style="display:none;margin-bottom:0">
+        <label class="f">中转站接口地址 <span class="hint">— 例如 https://xxx.com/v1</span></label>
+        <input type="text" id="baseUrl" placeholder="https://你的中转站/v1">
+      </div>
+      <div class="field" style="margin-bottom:0">
+        <label class="f">模型名</label>
+        <input type="text" id="modelName" placeholder="deepseek-flash">
+      </div>
+    </div>
+    <div class="note">Key 只存在你这台电脑上。DeepSeek 的 Key 申请地址：<b>platform.deepseek.com/api_keys</b></div>
+  </div>
+
+  <!-- 输入 -->
+  <div class="panel">
+    <h2><span class="dot"></span>第二步：说一个想法</h2>
+    <div class="field">
+      <label class="f">你的想法 <span class="hint">— 大白话就行。想做多条，一行写一条（批量产出）</span></label>
+      <textarea id="idea" rows="4" placeholder="例：我想拍一条讲错题本的视频&#10;例：我想讲讲为什么孩子单词背了就忘"></textarea>
+    </div>
+    <div class="row c3">
+      <div class="field"><label class="f">发哪个账号</label>
+        <select id="account">
+          <option value="自动判断">自动判断（让 AI 决定）</option>
+          <option value="A 自习室号（助教出镜）">A 自习室号（助教出镜）</option>
+          <option value="B 图书馆号（图书馆姐姐出镜）">B 图书馆号（图书馆姐姐出镜）</option>
+          <option value="C 宝妈外围号（宝妈本人出镜）">C 宝妈外围号（宝妈本人出镜）</option>
+        </select>
+      </div>
+      <div class="field"><label class="f">目标时长</label>
+        <select id="duration">
+          <option value="45-60秒（口播类）">45-60 秒（口播类）</option>
+          <option value="30-35秒（氛围片，无口播）">30-35 秒（氛围片，无口播）</option>
+          <option value="15-25秒（C号外围号）">15-25 秒（C 号外围号）</option>
+        </select>
+      </div>
+      <div class="field"><label class="f">想蹭的热点 <span class="hint">可留空</span></label>
+        <input type="text" id="hotspot" placeholder="例：重阳节 / 月考出分">
+      </div>
+    </div>
+    <div class="field">
+      <label class="f">素材台账 <span class="hint">— 第 3 步会自动对照它，标注「有现成素材 / 需补拍」</span></label>
+      <textarea id="ledger" rows="7"></textarea>
+      <div class="assetbox" id="assetbox">正在读取素材…</div>
+    </div>
+    <div class="divider"></div>
+    <button class="btn-main" id="start">开始生成</button>
+    <button class="btn-ghost" id="stop" disabled>停止</button>
+    <div class="progress" id="progress"></div>
+  </div>
+
+  <div id="results"></div>
+</div>
+
+<div class="bar">
+  <button class="btn-ghost" id="exportMd">导出完整方案</button>
+  <button class="btn-ghost" id="copyAll">复制全文</button>
+  <button class="btn-ghost" id="regen">重新生成</button>
+  <button class="btn-ghost" id="clearResults">清空</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+var API_BASE = "";          // 由服务端页面注入；file:// 打开时为 ""
+var ONLINE = false;
+var DEFAULT_API = "http://127.0.0.1:8765";
+
+var RULES_BLOCK = [
+"铁律（违反即返工）：",
+"1. 学生和儿童一律零出镜。出镜人只能是助教、图书馆姐姐、宝妈本人。",
+"2. 背影、侧脸等任何可辨认形象都不行，涉及学生的画面必须虚焦到可辨认度＝0。",
+"3. 不得出现绝对化用语（最好、第一、唯一、百分百、保证提分）。",
+"4. 不得出现学科培训表述（补课、辅导、培优、提分班）。",
+"5. 不得出现学生姓名。便利贴、错题本、信件、试卷上的姓名必须打码或匿名。",
+"6. 涉及学生作品必须已获书面授权，落款统一匿名。",
+"口播规范：前3秒抛结论｜关键词上大字幕｜结尾必有互动指令｜离镜头1.5米、看镜头上方3cm、语速慢10%",
+"发布时段：A 早6:30-6:45 ｜ B 早10:00 或 晚19:00-19:30 ｜ C 晚19:00-21:00（与主号错开≥1小时）"
+].join("\n");
+
+var SYSTEM_PROMPT = [
+"你是我的新媒体内容负责人，负责一个「少儿图书馆 ＋ 自习室」双业态的短视频账号矩阵。",
+"你要独立完成从选题到复盘的完整内容生产链路。交付的是可以直接开拍、可以直接发布的成品，不是「建议」和「方向」。",
+"",
+"【业务背景】",
+"自习室：面向初高中学生。卖点是「有人盯着」——助教盯背单词、盯完成度、盯错题登记。解决「买了很多课、囤了很多资料，但没人盯着就不做」。",
+"少儿图书馆：面向 3-10 岁儿童家庭。卖点是真人共读、分级阅读、绘本借阅。解决「买了很多书，但孩子不读」。",
+"转化路径：短视频 → 评论区扣关键词 → 私信 → 到店。",
+"",
+"【三个账号】",
+"A 自习室号：助教出镜。人设：专业、严格但不凶，像「带过很多届学生的过来人」。",
+"B 图书馆号：图书馆姐姐出镜。人设：温柔、有耐心，像「懂童书也懂孩子的人」。",
+"C 宝妈外围号：宝妈本人出镜。人设：真实用户视角，会吐槽、会翻车、会后知后觉。",
+"三个账号人设严格区分，同一素材不做同质化翻拍。",
+"",
+RULES_BLOCK,
+"",
+"【对标账号】",
+"小红书：淮安叮叮书房、艺云书院（拆解爆款选题、封面标题、评论区话术）。",
+"抖音：圆圆老师、今天几点下班（跟拍结构、口播节奏、更新频率）。",
+"注意：你无法访问这些账号的实时内容。不确定对方具体发了什么时，只描述「该对标哪一类选题形式」，不要编造具体爆款。",
+"",
+"【内容类型配比】",
+"干货型（方法/清单/教程，最容易被收藏）｜争议型（先认可再转折，不贬低任何人和产品，最容易被评论）｜氛围型（无口播，慢镜头+字幕+BGM，拉完播）",
+"",
+"【通用纪律】",
+"禁止空话。不许出现「建议多尝试」「可以进一步优化」这类没有具体动作的表述。每条建议必须能直接执行。全程中文，用 Markdown 排版。"
+].join("\n");
+
+var STEP_NAMES = ["选题定位","文案","脚本","剪辑","发布","数据","改进"];
+
+/* ---------------- 工具 ---------------- */
+function $(id){return document.getElementById(id)}
+var toastTimer;
+function toast(msg,ms,kind){
+  var t=$("toast"); t.textContent=msg;
+  t.className="toast show"+(kind==="bad"?" bad":kind==="ok"?" ok":"");
+  clearTimeout(toastTimer); toastTimer=setTimeout(function(){t.className="toast"},ms||2600);
+}
+function ls(k,v){
+  try{ if(v===undefined) return localStorage.getItem(k); localStorage.setItem(k,v); }catch(e){ return null }
+}
+function fallbackCopy(text,done){
+  var ta=document.createElement("textarea"); ta.value=text;
+  ta.style.position="fixed"; ta.style.left="-9999px"; document.body.appendChild(ta);
+  ta.focus(); ta.select();
+  var ok=false; try{ok=document.execCommand("copy")}catch(e){}
+  document.body.removeChild(ta);
+  if(ok) done(); else toast("复制失败，请手动选中后按 Ctrl+C","4000","bad");
+}
+function copyText(text,btn){
+  function done(){var o=btn.textContent;btn.textContent="已复制 ✓";setTimeout(function(){btn.textContent=o},1500)}
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(done).catch(function(){fallbackCopy(text,done)});
+  } else fallbackCopy(text,done);
+}
+function focusReveal(el){
+  if(!el)return;
+  try{if(typeof el.scrollIntoView==="function")el.scrollIntoView({block:"center"})}catch(e){}
+  try{if(typeof el.focus==="function")el.focus()}catch(e){}
+}
+
+/* ---------------- 步骤提示词 ---------------- */
+function stepPrompts(ctx){
+  var out = ctx.out || [];
+  var ledger = ctx.ledger || "";
+  return [
+  {name:STEP_NAMES[0], prompt:
+"【用户的想法】\n"+ctx.idea+"\n\n【指定账号】\n"+ctx.account+"\n\n【目标时长】\n"+ctx.duration+
+"\n\n【想蹭的热点】\n"+(ctx.hotspot||"未指定，你来判断现在适合蹭什么")+
+"\n\n请完成第 1 步「选题定位」，输出 6 项：\n"+
+"1. **账号归属**：最适合 A/B/C 哪个号，说明理由。用户已指定但你认为更该换号时，直接说出来。\n"+
+"2. **人设口吻要求**：按该账号人设，列出 2-3 条口吻特征。\n"+
+"3. **对标来源**：该对标哪一类爆款形式（不确定对方内容就只描述形式，不要编造）。\n"+
+"4. **蹭什么热点／节点**：以及**为什么是现在做**。\n"+
+"5. **爆点预判**：更可能跑赢完播、互动还是收藏？为什么？\n"+
+"6. **一句话主旨**：20 字以内。\n\n要求具体可执行，禁止空话。"},
+
+  {name:STEP_NAMES[1], prompt:
+"【第 1 步结论】\n"+out[0]+"\n\n请完成第 2 步「文案」，输出三部分：\n\n"+
+"**第一部分：口播文案全文**\n- 时长 "+ctx.duration+"，按每秒 4-5 字估算，字数必须匹配\n"+
+"- 前 3 秒必须抛结论或制造冲突，不铺垫不寒暄\n- 关键词处用 【大字幕：xxx】 标出\n"+
+"- 结尾必须有明确互动指令（扣字／合拍／晒图），不能只是「点赞关注」\n- 口吻严格符合该账号人设\n\n"+
+"**第二部分：合规自检**\n逐条比对下面的铁律，每条明确写「通过」或「命中」。命中的必须给出改写建议（原句 → 改成什么）。\n"+
+RULES_BLOCK+"\n\n另外单独检查：有无绝对化用语、有无学科培训表述、有无暗示学生出镜的画面描述。\n\n"+
+"**第三部分：字数与时长核对**\n报出实际口播字数，按 4-5 字/秒换算，确认是否落在目标区间。超出就给删减建议。"},
+
+  {name:STEP_NAMES[2], prompt:
+"【已定稿文案】\n"+out[1]+"\n\n【素材台账 — 必须严格对照，不许凭空编镜头】\n"+ledger+"\n\n【目标时长】"+ctx.duration+"\n\n"+
+"请完成第 3 步「脚本」，输出四部分：\n\n"+
+"**一、分镜表**（Markdown 表格：# ｜ 画面 ｜ 景别 ｜ 时长 ｜ 素材来源）\n"+
+"「素材来源」必须二选一：① 写出台账里的**具体文件名**；② 写「需补拍」。不许写含糊说法。\n\n"+
+"**二、口播脚本**\n正文 ＋ 【】内的镜头／字幕提示（提示不念出来），提示里写明切到哪个素材。\n\n"+
+"**三、素材缺口汇总**\n所有「需补拍」的镜头列一张表，每条给出：需补拍什么／怎么拍／**不补拍时用现有素材怎么替代**。\n\n"+
+"**四、出片数据（非常重要，必须输出）**\n"+
+"在最后输出一个 JSON 代码块，把分镜转成机器可读格式，供自动剪辑使用。格式严格如下：\n"+
+"```json\n"+
+"{\n  \"shots\": [\n    {\"asset\": \"素材文件名或文件名片段（能用台账里的原文件名最好，如 习04_工位一排）\", \"duration\": 5, \"motion\": \"zoom-in\", \"subtitle\": \"这句字幕的完整文字\"}\n  ]\n}\n"+
+"```\n"+
+"硬性要求：\n"+
+"- motion 只能取：zoom-in（缓推）／zoom-out（缓拉）／pan-left（左移）／pan-right（右移）／still（静止）\n"+
+"- 所有 duration 相加必须等于 "+ctx.duration+" 的秒数\n"+
+"- subtitle 按语句自然断句，每条不超过 18 个字，且不要出现换行\n"+
+"- 「需补拍」的镜头，asset 填一个最接近的现有素材文件名，**不要留空**\n"+
+"- 这个 JSON 必须是合法 JSON，不要加注释"},
+
+  {name:STEP_NAMES[3], prompt:
+"【第 3 步脚本】\n"+out[2]+"\n\n请完成第 4 步「剪辑」，输出六部分：\n\n"+
+"1. **字幕全文**：逐条，格式 `[0:00–0:03] 字幕内容`\n"+
+"2. **大字幕关键词清单**：哪些词必须上大字幕，以及字幕样式建议（字体／位置／色块）\n"+
+"3. **BGM 方向**：平台当周热门类目，音量占人声的百分之多少\n"+
+"4. **卡点与音效节点**：哪些地方保留原声（翻卡声、翻书声做成 ASMR 质感），哪些地方音乐让位\n"+
+"5. **调色与节奏建议**：色调、饱和度、高光；全片切几刀、哪里留停顿\n"+
+"6. **禁止出现的画面**：对照铁律，列出绝对不能出现的画面\n\n"+
+"验收标准：剪辑照此执行即可成片，无需再问。"},
+
+  {name:STEP_NAMES[4], prompt:
+"【前四步产出】\n"+out.slice(0,4).join("\n\n---\n\n")+"\n\n请完成第 5 步「发布」，输出六部分：\n\n"+
+"1. **标题备选 3 个**：每个含钩子，并标注这个标题钩的是什么情绪\n"+
+"2. **正文文案**：可直接复制发布\n"+
+"3. **话题标签**：含蹭热点的官方话题 ＋ 自建话题，5-7 个\n"+
+"4. **评论区置顶话术**：可直接复制发布\n"+
+"5. **建议发布时间**：必须符合该账号时段规范，说明理由\n"+
+"6. **发布后 2 小时的动作清单**\n\n"+
+"注意：文案里若承诺了「资料／名额／奖品／给你留着」，必须明确标注 ⚠️ 提醒核实该承诺是否真实存在。"},
+
+  {name:STEP_NAMES[5], prompt:
+"【本条信息】账号："+ctx.account+"　时长："+ctx.duration+"\n\n【第 1 步结论】\n"+out[0]+"\n\n"+
+"请完成第 6 步「数据」，输出四部分：\n\n"+
+"1. **三个核心指标的追踪方案**：完播率、涨粉数、私信咨询量 —— 分别在什么时点看、在平台哪个位置看、多少算合格\n"+
+"2. **数据记录表格式**：Markdown 表格，本条作为已填好的第一行，留空给后续填写\n"+
+"3. **按选题类型归因的方法**：干货／争议／氛围三类分别怎么对比\n"+
+"4. **判断标准**：明确写出多少算跑赢、多少算跑输（用相对值，不要绝对值）"},
+
+  {name:STEP_NAMES[6], prompt:
+"【本条信息】账号："+ctx.account+"\n\n【第 1 步结论】\n"+out[0]+"\n\n【第 5 步发布物料】\n"+out[4]+"\n\n"+
+"请完成第 7 步「改进」，输出四部分：\n\n"+
+"1. **发布后 48 小时的复盘检查点**：看哪几个数、在哪看、每个数说明什么\n"+
+"2. **如果跑赢**：下一步具体动作 —— 加倍复制什么？选题、开头 3 秒、时长，还是某个具体元素？\n"+
+"3. **如果跑输**：下一步具体动作 —— 停做还是改造？改造改哪个变量？\n"+
+"4. **复用价值**：能不能拆成系列、能不能改一版再发、能不能沉淀成固定栏目？\n\n"+
+"要求：每条建议能直接执行，指名道姓说清「哪个账号、哪个形式、加／减／改什么」。禁止空话。"}
+  ];
+}
+
+/* ---------------- 素材台账 ---------------- */
+var DEFAULT_LEDGER = [
+"【可用素材】全部位于 新媒体\\交付\\素材切图\\",
+"自习室：习01_门帘招牌｜习02_挂钟｜习03_书架教辅｜习04_工位一排｜习05_单工位｜习06_台历绿植｜习07_窗与桌面｜习08_祝福卡墙｜习09_单张祝福卡｜习10_空桌椅｜习v01_文创陈列架｜习v02_自习室门帘",
+"图书馆：馆01_单词卡小径｜馆02_Welcome地垫｜馆03_Iam_Brave卡片｜馆04_绘本区全景｜馆05_书架绘本特写｜馆06_坐垫阅读角｜馆07_毛毛虫挂幅｜馆08_绘本区纵深｜馆09_毛毛虫海报｜馆10_巴士海报｜馆11_卡通挂钟｜馆12_圆柱书架｜馆13_原木绘本架｜馆14_英文日历板｜馆15_黄圆桌童椅｜馆16_大窗城市景｜馆17_日历板正面｜馆18_门内书架｜馆v01_进门单词卡小径｜馆v02_绘本架横移｜馆v03_绘本区主景｜馆v04_挂钟转角｜馆v05_儿童活动室｜馆v06_英文日历板｜馆v07_窗外城市",
+"",
+"【视频素材】",
+"图书馆\\微信视频2026-10-09_114221_581.mp4（39.7秒）：0-3s进门｜3-12s绘本架横移（最优质）｜12-17s绘本区｜18-21s挂钟｜24-28s活动室｜29-31s日历板｜36-39s窗外。33-36s虚焦废镜。",
+"自习室\\微信视频2026-10-09_114322_981.mp4（29.5秒）：6-9s走廊｜9-13s陈列架｜18-21s自习室门帘｜27-29s走廊。2-4s、24-26s废镜；14-16s会带到禁用墙，务必剔除。0-2s门牌1913有春节春联，错季。",
+"",
+"【禁用素材 — 绝对不能用】",
+"自习室\\微信图片_2026-10-09_114241_170.jpg 与 微信图片_2026-10-09_114315_100.jpg：拍到同一面墙，墙上有约40张可辨认的学生真人照片、家长微信聊天记录截图、带姓名奖状。全部禁用。",
+"微信图片_2026-10-09_114308_783.jpg 与 114301_801.jpg 是完全相同的重复文件。",
+"",
+"【现有素材不覆盖、须标「需补拍」的镜头】",
+"白板/黑板特写、手写便利贴、打卡表、错题本堆叠、红笔圈错题、摊开的单词本、单词卡/试卷/信件/计时器/收纳盒/热饮杯等道具特写、手部动作特写（翻卡/翻书/写字）、绘本内页特写、过程演示（拓印/做书签/手绘）、馆外场景（落叶/邮筒）、家中场景。",
+"",
+"【替代手法】缺道具特写时用这四种：① 全屏大字幕色卡 ② 现有切图做 Ken Burns 慢推/慢拉/横移 ③ 左右分屏对撞 ④ 黑屏白字收尾。"
+].join("\n");
+
+/* ---------------- 调用模型 ---------------- */
+var abortFlag=false, currentCtrl=null;
+
+function endpoint(){
+  var p = $("provider").value;
+  if(p==="deepseek") return {baseUrl:"https://api.deepseek.com", model:$("modelName").value.trim()||"deepseek-flash"};
+  return {baseUrl:$("baseUrl").value.trim().replace(/\/+$/,""), model:$("modelName").value.trim()};
+}
+
+async function callModel(messages, onChunk){
+  var key=$("apiKey").value.trim();
+  if(!key) throw new Error("NO_KEY");
+  var ep=endpoint();
+  if(!ep.model) throw new Error("请先填模型名（例如 deepseek-flash）");
+  if(!ep.baseUrl) throw new Error("请先填中转站接口地址");
+
+  if(ONLINE){
+    // 走本地服务代理：不受浏览器 CORS 限制，换任何模型都能用
+    var ctrl=new AbortController(); currentCtrl=ctrl;
+    var res;
+    try{
+      res=await fetch(API_BASE+"/api/chat",{method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({baseUrl:ep.baseUrl,apiKey:key,model:ep.model,messages:messages,temperature:1.0}),
+        signal:ctrl.signal});
+    }catch(e){ throw new Error(e&&e.name==="AbortError"?"__ABORTED__":"网络连接失败，请检查网络后重试") }
+    if(!res.ok) throw new Error("本地服务出错（"+res.status+"），请关掉黑窗口重新双击「启动工作流.bat」");
+    var rd=res.body.getReader(), dec=new TextDecoder("utf-8"), buf="";
+    while(true){
+      var c=await rd.read(); if(c.done) break;
+      buf+=dec.decode(c.value,{stream:true});
+      var idx;
+      while((idx=buf.indexOf("\n\n"))>=0){
+        var seg=buf.slice(0,idx); buf=buf.slice(idx+2);
+        if(seg.indexOf("__DONE__")>=0) return;
+        if(seg.indexOf("__ERR__")===0) throw new Error(seg.slice(7));
+        if(!seg) continue;
+        try{
+          var o=JSON.parse(seg);
+          var d=o&&o.choices&&o.choices[0]&&o.choices[0].delta;
+          if(d&&d.content) onChunk(d.content);
+        }catch(e){}
+      }
+      // 先处理缓冲区再判断结束，否则错误信息会被 __DONE__ 抢先吞掉
+      if(buf.indexOf("__DONE__")>=0) return;
+      if(buf.indexOf("__ERR__")===0) throw new Error(buf.slice(7));
+    }
+    return;
+  }
+
+  // 纯网页模式：直连（只有 DeepSeek 等允许 CORS 的接口能用）
+  var url=ep.baseUrl;
+  if(url.indexOf("api.deepseek.com")>=0 && url.indexOf("/chat/completions")<0) url+="/chat/completions";
+  else if(url.indexOf("/chat/completions")<0) url+=(url.indexOf("/v1")>=0?"":"/v1")+"/chat/completions";
+  var ctrl2=new AbortController(); currentCtrl=ctrl2;
+  var r2;
+  try{
+    r2=await fetch(url,{method:"POST",signal:ctrl2.signal,
+      headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},
+      body:JSON.stringify({model:ep.model,messages:messages,stream:true,temperature:1.0})});
+  }catch(e){ throw new Error(e&&e.name==="AbortError"?"__ABORTED__":"网络连接失败（浏览器直连被拦截）。请改用「启动工作流.bat」打开，能绕开这个限制。") }
+  if(!r2.ok){
+    if(r2.status===401||r2.status===403) throw new Error("API Key 无效，请检查是否复制完整");
+    if(r2.status===402) throw new Error("账户余额不足，请到平台充值");
+    if(r2.status===429) throw new Error("请求太频繁了，请等一分钟再试");
+    if(r2.status>=500) throw new Error("模型服务暂时不可用，请稍后重试");
+    throw new Error("请求被拒绝（"+r2.status+"），请检查模型名和接口地址");
+  }
+  var rd2=r2.body.getReader(), dec2=new TextDecoder("utf-8"), b2="";
+  while(true){
+    var c2=await rd2.read(); if(c2.done) break;
+    b2+=dec2.decode(c2.value,{stream:true});
+    var ls2=b2.split("\n"); b2=ls2.pop();
+    for(var i=0;i<ls2.length;i++){
+      var ln=ls2[i].trim(); if(ln.indexOf("data:")!==0) continue;
+      var pl=ln.slice(5).trim(); if(pl==="[DONE]") return; if(!pl) continue;
+      try{var o2=JSON.parse(pl);var d2=o2&&o2.choices&&o2.choices[0]&&o2.choices[0].delta;
+        if(d2&&d2.content) onChunk(d2.content);}catch(e){}
+    }
+  }
+}
+
+/* ---------------- 卡片 ---------------- */
+function makeCard(i){
+  var el=document.createElement("div"); el.className="step";
+  el.innerHTML='<div class="step-head"><div class="step-num">'+(i+1)+'</div><h3>第 '+(i+1)+' 步 · '+STEP_NAMES[i]+'</h3><span class="badge">等待中</span></div>'+
+    '<div class="step-body empty">等待上一步完成…</div>'+
+    '<div class="step-foot"><button class="btn-sm act-copy">复制本步</button><button class="btn-sm act-retry">重试这步</button></div>';
+  return el;
+}
+function setStatus(card,st,txt){
+  card.className="step "+(st||"");
+  var b=card.querySelector(".badge");
+  b.className="badge "+(st||""); b.textContent=txt;
+}
+function body(card){return card.querySelector(".step-body")}
+function foot(card){return card.querySelector(".step-foot")}
+
+/* ---------------- 从第3步结果里抠 JSON ---------------- */
+function extractShots(text){
+  var m=text.match(/```json\s*([\s\S]*?)```/);
+  var raw=m?m[1]:null;
+  if(!raw){
+    var i=text.indexOf('{"shots"');
+    if(i<0) i=text.indexOf('{ "shots"');
+    if(i>=0){ var d=0,s=-1;
+      for(var k=i;k<text.length;k++){ if(text[k]==="{"){if(d===0)s=k;d++} else if(text[k]==="}"){d--; if(d===0){raw=text.slice(s,k+1);break}} } }
+  }
+  if(!raw) return null;
+  try{
+    var o=JSON.parse(raw.replace(/,\s*([}\]])/g,"$1"));
+    if(o&&o.shots&&o.shots.length) return o.shots;
+  }catch(e){}
+  return null;
+}
+
+/* ---------------- 出片面板 ---------------- */
+function buildRenderPanel(task, taskEl){
+  var shots=extractShots(task.text[2]||"");
+  var box=document.createElement("div");
+  box.className="step";
+  box.innerHTML='<div class="step-head"><div class="step-num" style="background:#0891b2">🎬</div>'+
+    '<h3>自动剪辑 · 出片</h3><span class="badge">'+(shots?"可出片":"未识别到分镜数据")+'</span></div>'+
+    '<div class="step-body" style="padding-bottom:6px"></div>'+
+    '<div class="step-foot show"></div>';
+  var b=body(box), f=foot(box);
+
+  if(!shots){
+    b.className="step-body empty";
+    b.textContent="第 3 步没有输出可用的 JSON 分镜数据，所以没法自动剪辑。你可以在第 3 步点「重试这步」重跑一次。";
+    taskEl.appendChild(box); return;
+  }
+
+  b.className="step-body";
+  b.style.whiteSpace="normal";
+  var missing=0;
+  shots.forEach(function(s,i){
+    var line=document.createElement("div"); line.className="shotline";
+    var assetOk = !!(s.asset);
+    if(!assetOk) missing++;
+    line.innerHTML='<span class="n">'+(i+1)+'</span><span class="m">'+esc(s.asset||"—")+
+      '<span class="pill '+(assetOk?"ok":"no")+'">'+(assetOk?"已匹配":"缺素材")+'</span></span>'+
+      '<span class="d">'+esc(s.motion||"zoom-in")+' · '+(s.duration||3)+'s</span>';
+    b.appendChild(line);
+  });
+  var tip=document.createElement("div"); tip.className="note";
+  tip.textContent="共 "+shots.length+" 个镜头，合计 "+shots.reduce(function(a,s){return a+(+s.duration||0)},0)+" 秒。"+
+    (missing?"有 "+missing+" 个镜头没匹配到素材，会用深灰底色块代替。":"");
+  b.appendChild(tip);
+
+  var btnR=document.createElement("button"); btnR.className="btn-sm btn-ok"; btnR.textContent="一键出片（mp4）";
+  var btnJ=document.createElement("button"); btnJ.className="btn-sm btn-p"; btnJ.textContent="生成剪映草稿";
+  f.appendChild(btnR); f.appendChild(btnJ);
+
+  if(!ONLINE){
+    btnR.disabled=true; btnJ.disabled=true;
+    var w=document.createElement("div"); w.className="note";
+    w.innerHTML="⚠️ 当前是纯网页模式，不能出片。请双击桌面上的 <b>「启动工作流.bat」</b> 重新打开。";
+    b.appendChild(w);
+  }
+
+  btnR.onclick=function(){ doRender(task, shots, btnR, b) };
+  btnJ.onclick=function(){ doJianying(task, shots, btnJ, b) };
+
+  taskEl.appendChild(box);
+}
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+
+function subList(shots){
+  var t=0,out=[];
+  shots.forEach(function(s){
+    var d=+s.duration||3;
+    if(s.subtitle) out.push({start:+(t+0.2).toFixed(2), end:+(t+d-0.2).toFixed(2), text:String(s.subtitle)});
+    t+=d;
+  });
+  return out;
+}
+
+function doRender(task, shots, btn, box){
+  btn.disabled=true; var old=btn.textContent; btn.textContent="正在出片…";
+  var note=document.createElement("div"); note.className="note"; note.textContent="开始渲染，请稍候（一条 45 秒的片子通常 30-90 秒）…";
+  box.appendChild(note);
+  fetch(API_BASE+"/api/render",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({title:task.idea.slice(0,30), shots:shots, subtitles:subList(shots),
+      width:1080,height:1920,fps:30,transition:0.4,fontSize:90})})
+  .then(function(r){return r.json()})
+  .then(function(j){
+    btn.disabled=false; btn.textContent=old;
+    if(j.ok){
+      note.innerHTML='<b style="color:#047857">✅ 成片已生成</b><br>'+esc(j.out)+
+        '<br>时长 '+j.duration+' 秒 · '+Math.round(j.size/1048576*10)/10+' MB';
+      var ob=document.createElement("button"); ob.className="btn-sm"; ob.textContent="打开所在文件夹";
+      ob.onclick=function(){ fetch(API_BASE+"/api/open",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({path:j.out})}); };
+      box.appendChild(ob);
+      toast("出片成功","3000","ok");
+    }else{
+      note.innerHTML='<span style="color:#b91c1c">❌ '+esc(j.message)+'</span>';
+      toast("出片失败","4000","bad");
+    }
+  })
+  .catch(function(e){
+    btn.disabled=false; btn.textContent=old;
+    note.innerHTML='<span style="color:#b91c1c">❌ 出片失败：'+esc(e.message)+'</span>';
+  });
+}
+
+function doJianying(task, shots, btn, box){
+  btn.disabled=true; var old=btn.textContent; btn.textContent="正在生成…";
+  var note=document.createElement("div"); note.className="note"; note.textContent="正在生成剪映草稿…";
+  box.appendChild(note);
+  fetch(API_BASE+"/api/jianying",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({title:task.idea.slice(0,30), shots:shots, subtitles:subList(shots),
+      width:1080,height:1920,fps:30})})
+  .then(function(r){return r.json()})
+  .then(function(j){
+    btn.disabled=false; btn.textContent=old;
+    if(j.ok){
+      note.innerHTML='<b style="color:#7c3aed">✅ 剪映草稿已生成</b><br>'+esc(j.name)+
+        '<br>打开剪映，在草稿列表里就能看到它。'+(j.warn?'<br><span style="color:#b45309">'+esc(j.warn)+'</span>':'');
+      toast("剪映草稿已生成","3000","ok");
+    }else{
+      note.innerHTML='<span style="color:#b91c1c">❌ '+esc(j.message)+'</span>';
+      toast("生成失败","4000","bad");
+    }
+  })
+  .catch(function(e){
+    btn.disabled=false; btn.textContent=old;
+    note.innerHTML='<span style="color:#b91c1c">❌ 失败：'+esc(e.message)+'</span>';
+  });
+}
+
+/* ---------------- 主流程 ---------------- */
+var tasks=[], currentShots={};
+
+async function start(){
+  var key=$("apiKey").value.trim(), raw=$("idea").value.trim();
+  if(!key&&!raw){ toast("还差两样：① 填 API Key（platform.deepseek.com/api_keys） ② 写一个想法","6500","bad"); focusReveal($("apiKey")); return }
+  if(!key){ toast("请先填 API Key。申请地址：platform.deepseek.com/api_keys","5200","bad"); focusReveal($("apiKey")); return }
+  if(!raw){ toast("请先写一个想法","3000","bad"); focusReveal($("idea")); return }
+
+  ls("wf_key",key); ls("wf_provider",$("provider").value);
+  ls("wf_model",$("modelName").value); ls("wf_base",$("baseUrl").value); ls("wf_ledger",$("ledger").value);
+
+  var ideas=raw.split("\n").map(function(s){return s.trim()}).filter(Boolean);
+  var ctxBase={account:$("account").value,duration:$("duration").value,
+               hotspot:$("hotspot").value.trim(),ledger:$("ledger").value.trim()||DEFAULT_LEDGER};
+
+  $("start").disabled=true; $("stop").disabled=false; abortFlag=false;
+  var results=$("results"); results.innerHTML=""; tasks=[];
+  currentShots={};
+
+  for(var k=0;k<ideas.length;k++){
+    var tEl=document.createElement("div"); tEl.className="task";
+    var h=document.createElement("div"); h.className="task-head";
+    h.textContent="想法 "+(k+1)+"／"+ideas.length+"："+ideas[k];
+    tEl.appendChild(h);
+    var t={idea:ideas[k],cards:[],text:[],el:tEl};
+    for(var i=0;i<7;i++){ var c=makeCard(i); tEl.appendChild(c); t.cards.push(c) }
+    results.appendChild(tEl); tasks.push(t);
+  }
+
+  for(var k2=0;k2<tasks.length;k2++){
+    if(abortFlag) break;
+    await runTask(tasks[k2], ctxBase);
+    if(abortFlag) break;
+    buildRenderPanel(tasks[k2], tasks[k2].el);
+  }
+
+  $("start").disabled=false; $("stop").disabled=true;
+  toast(abortFlag?"已停止":"全部完成 ✓","3000",abortFlag?"":"ok");
+}
+
+async function runTask(task, ctxBase){
+  for(var i=0;i<7;i++){
+    if(abortFlag) return;
+    var card=task.cards[i], b=body(card), f=foot(card);
+    setStatus(card,"running","生成中…");
+    b.className="step-body"; b.style.whiteSpace="pre-wrap"; b.textContent="";
+    f.className="step-foot";
+    $("progress").innerHTML="正在生成：<b>"+esc(task.idea.slice(0,20))+"</b> · 第 "+(i+1)+" 步 "+STEP_NAMES[i]+"…";
+
+    var prompts=stepPrompts({idea:task.idea,account:ctxBase.account,duration:ctxBase.duration,
+      hotspot:ctxBase.hotspot,ledger:ctxBase.ledger,out:task.text});
+    var full="";
+    try{
+      await callModel([{role:"system",content:SYSTEM_PROMPT},{role:"user",content:prompts[i].prompt}],
+        function(ch){ full+=ch; b.textContent=full; });
+      if(!full.trim()) throw new Error("模型没有返回内容，请重试");
+      task.text[i]=full;
+      setStatus(card,"done","已完成"); f.className="step-foot show";
+    }catch(e){
+      var m=(e&&e.message)||"未知错误";
+      if(m==="__ABORTED__"){ setStatus(card,"","已停止"); return }
+      if(m==="NO_KEY"){ setStatus(card,"error","缺密钥");
+        b.className="step-body warn";
+        b.textContent="还没有填 API Key。请到页面顶部填写。\n\n申请地址：https://platform.deepseek.com/api_keys";
+        return }
+      setStatus(card,"error","失败");
+      b.className="step-body warn";
+      b.textContent="⚠️ "+m+"\n\n点下面的「重试这步」可以只重跑这一步，前面的结果不会丢。";
+      f.className="step-foot show";
+      return;
+    }
+  }
+  $("progress").innerHTML="";
+}
+
+async function runOneStep(task,ctxBase,i){
+  var card=task.cards[i], b=body(card), f=foot(card);
+  setStatus(card,"running","生成中…");
+  b.className="step-body"; b.style.whiteSpace="pre-wrap"; b.textContent=""; f.className="step-foot";
+  var full="";
+  try{
+    var prompts=stepPrompts({idea:task.idea,account:ctxBase.account,duration:ctxBase.duration,
+      hotspot:ctxBase.hotspot,ledger:ctxBase.ledger,out:task.text});
+    await callModel([{role:"system",content:SYSTEM_PROMPT},{role:"user",content:prompts[i].prompt}],
+      function(ch){ full+=ch; b.textContent=full; });
+    if(!full.trim()) throw new Error("模型没有返回内容，请重试");
+    task.text[i]=full; setStatus(card,"done","已完成"); f.className="step-foot show";
+  }catch(e){
+    var m=(e&&e.message)||"未知错误";
+    if(m==="__ABORTED__"){ setStatus(card,"","已停止"); return }
+    setStatus(card,"error","失败");
+    b.className="step-body warn";
+    b.textContent="⚠️ "+m+"\n\n点下面的「重试这步」可以只重跑。";
+    f.className="step-foot show";
+  }
+}
+
+function stopRun(){
+  abortFlag=true;
+  if(currentCtrl){try{currentCtrl.abort()}catch(e){}}
+  $("stop").disabled=true; $("start").disabled=false; $("progress").innerHTML="";
+}
+
+/* ---------------- 导出 ---------------- */
+function buildMd(){
+  var L=["# 新媒体内容方案（7 步工作流）","","生成时间："+new Date().toLocaleString("zh-CN"),"",
+    "- 账号："+$("account").value,"- 目标时长："+$("duration").value,
+    "- 热点："+($("hotspot").value.trim()||"未指定"),"- 模型："+endpoint().model,""];
+  tasks.forEach(function(t){
+    L.push("---","","## 想法："+t.idea,"");
+    for(var i=0;i<7;i++){ L.push("### 第 "+(i+1)+" 步 · "+STEP_NAMES[i],"",(t.text[i]||"（未生成）").trim(),"") }
+    var sh=extractShots(t.text[2]||"");
+    if(sh){ L.push("### 出片数据","","```json",JSON.stringify({shots:sh},null,2),"```","") }
+  });
+  return L.join("\n");
+}
+function hasContent(){ return tasks.some(function(t){return t.text.some(Boolean)}) }
+function download(name,text){
+  var b=new Blob([text],{type:"text/markdown;charset=utf-8"});
+  var u=URL.createObjectURL(b), a=document.createElement("a");
+  a.href=u; a.download=name; document.body.appendChild(a); a.click();
+  document.body.removeChild(a); setTimeout(function(){URL.revokeObjectURL(u)},3000);
+}
+
+/* ---------------- 启动 ---------------- */
+function applyProvider(){
+  var p=$("provider").value;
+  $("baseUrlWrap").style.display = p==="custom" ? "block" : "none";
+  var m=$("modelName").value;
+  if(p==="deepseek"){ $("modelName").value = (m&&m.indexOf("deepseek")===0)?m:"deepseek-flash";
+    $("modelName").placeholder="deepseek-flash"; }
+  else { $("modelName").value = (m&&m.indexOf("deepseek")!==0)?m:"gpt-4o";
+    $("modelName").placeholder="gpt-4o / claude-sonnet-4-20250514 / …"; }
+}
+
+document.addEventListener("DOMContentLoaded",function(){
+  $("apiKey").value=ls("wf_key")||"";
+  $("provider").value=ls("wf_provider")||"deepseek";
+  $("modelName").value=ls("wf_model")||"";
+  $("baseUrl").value=ls("wf_base")||"";
+  $("ledger").value=ls("wf_ledger")||DEFAULT_LEDGER;
+  applyProvider();
+
+  $("provider").onchange=applyProvider;
+  $("saveKey").onclick=function(){
+    if(!$("apiKey").value.trim()){toast("请先粘贴 API Key","3000","bad");return}
+    ls("wf_key",$("apiKey").value.trim());
+    ls("wf_provider",$("provider").value);
+    ls("wf_model",$("modelName").value);
+    ls("wf_base",$("baseUrl").value);
+    toast("已保存，下次自动填好","2600","ok");
+  };
+  $("clearKey").onclick=function(){ ls("wf_key",""); $("apiKey").value=""; toast("已清除本机保存的 Key") };
+  $("ledger").onblur=function(){ ls("wf_ledger",$("ledger").value) };
+  $("start").onclick=start;
+  $("stop").onclick=stopRun;
+  $("regen").onclick=function(){ if(!$("idea").value.trim()){toast("请先写一个想法","3000","bad");return} start() };
+  $("clearResults").onclick=function(){ $("results").innerHTML=""; tasks=[]; $("progress").innerHTML=""; toast("已清空") };
+  $("exportMd").onclick=function(){
+    if(!hasContent()){toast("还没有生成内容","3000","bad");return}
+    var d=new Date(),p=function(n){return n<10?"0"+n:""+n};
+    var n="内容方案_"+d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+"_"+p(d.getHours())+p(d.getMinutes())+".md";
+    download(n,buildMd()); toast("已导出："+n,"3000","ok");
+  };
+  $("copyAll").onclick=function(){ if(!hasContent()){toast("还没有生成内容","3000","bad");return} copyText(buildMd(),$("copyAll")) };
+
+  $("results").addEventListener("click",function(e){
+    var b=e.target; if(!b.classList) return;
+    if(b.classList.contains("act-copy")){
+      var c=b.closest(".step"); copyText(body(c).textContent,b); return;
+    }
+    if(b.classList.contains("act-retry")){
+      var c2=b.closest(".step");
+      var idx=[].indexOf.call(c2.parentNode.querySelectorAll(".step"),c2);
+      var ti=[].indexOf.call($("results").querySelectorAll(".task"),c2.parentNode);
+      if(idx<0||ti<0) return;
+      var ctx={account:$("account").value,duration:$("duration").value,
+               hotspot:$("hotspot").value.trim(),ledger:$("ledger").value.trim()||DEFAULT_LEDGER};
+      b.disabled=true;
+      runOneStep(tasks[ti],ctx,idx).then(function(){ b.disabled=false });
+    }
+  });
+
+  // 探测本地服务
+  function probe(base, cb){
+    var ctrl=new AbortController(); var to=setTimeout(function(){ctrl.abort()},1500);
+    fetch(base+"/api/health",{signal:ctrl.signal}).then(function(r){return r.json()})
+      .then(function(j){ clearTimeout(to); cb(j) }).catch(function(){ clearTimeout(to); cb(null) });
+  }
+  var candidates = location.protocol==="file:" ? [DEFAULT_API,"http://127.0.0.1:8766","http://127.0.0.1:8767"] : [""];
+  (function tryNext(i){
+    if(i>=candidates.length){ setOffline(); return }
+    probe(candidates[i], function(j){
+      if(j&&j.ok){ setOnline(candidates[i], j) } else { tryNext(i+1) }
+    });
+  })(0);
+
+  function setOnline(base, info){
+    ONLINE=true; API_BASE=base;
+    $("status").textContent="● 全自动模式 · 已连接";
+    $("status").style.background="rgba(16,185,129,.35)";
+    $("offlineTip").style.display="none";
+    var el=$("assetbox"); el.innerHTML="";
+    if(info.assets>0){
+      fetch(API_BASE+"/api/assets").then(function(r){return r.json()}).then(function(a){
+        if(!a.ok) return;
+        el.innerHTML="<b>服务端已扫到 "+a.assets.length+" 个素材文件</b>（可自动匹配）：<br>";
+        a.assets.slice(0,60).forEach(function(x){
+          var s=document.createElement("span"); s.className="a"; s.textContent=x.name;
+          el.appendChild(s);
+        });
+        if(a.assets.length>60){ var m=document.createElement("span"); m.className="a"; m.textContent="…等共 "+a.assets.length+" 个"; el.appendChild(m) }
+      });
+    } else { el.textContent="服务端没扫到素材文件。请把素材放进 新媒体\\ 文件夹里。" }
+    if(!info.ffmpeg) toast("提示：没找到 ffmpeg，自动出片不可用，文案功能正常","5000","bad");
+    if(!info.jianying) toast("提示：没检测到剪映，生成草稿不可用","5000","bad");
+  }
+  function setOffline(){
+    ONLINE=false;
+    $("status").textContent="○ 纯网页模式";
+    $("status").style.background="rgba(251,191,36,.4)";
+    $("offlineTip").style.display="block";
+    $("assetbox").textContent="（纯网页模式读不到本地素材列表，下面台账里的清单是预设的）";
+  }
+});
+</script>
+</body>
+</html>
